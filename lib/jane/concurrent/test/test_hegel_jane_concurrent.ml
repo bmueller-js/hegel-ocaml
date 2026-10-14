@@ -125,6 +125,46 @@ let worker_exception_test () =
   | exception Boom _ -> ()
 ;;
 
+(* The [run] that [module%hegel_concurrent_state_machine] generates takes the
+   capability at mode local, like [S.run_concurrent] does. *)
+
+module%hegel_concurrent_state_machine With_ctx = struct
+  type ctx = unit J.ctx
+
+  let incr _tc (_ : ctx) n = Atomic.incr n [@@rule]
+  let nonnegative _tc n = assert (Atomic.get n >= 0) [@@invariant]
+end
+
+module%hegel_concurrent_state_machine Without_ctx = struct
+  let incr _tc () n = Atomic.incr n [@@rule]
+  let nonnegative _tc n = assert (Atomic.get n >= 0) [@@invariant]
+end
+
+let ppx_of_concurrent_test () =
+  Hegel.run_hegel_test ~settings (fun tc ->
+    Concurrent_in_thread.with_blocking Await.Terminator.unkillable ~f:(fun concurrent ->
+      With_ctx.run
+        tc
+        ~concurrency:(J.of_concurrent concurrent)
+        ~step_count:10
+        ~init:(Atomic.make 0)
+        ~max_concurrency:2 [@nontail]))
+;;
+
+let local_threads () : unit Hegel.Concurrency.t @ local = exclave_
+  { spawn_join_n = Hegel.Concurrency.threads.spawn_join_n }
+;;
+
+let ppx_local_capability_test () =
+  Hegel.run_hegel_test ~settings (fun tc ->
+    Without_ctx.run
+      tc
+      ~concurrency:(local_threads ())
+      ~step_count:10
+      ~init:(Atomic.make 0)
+      ~max_concurrency:2 [@nontail])
+;;
+
 let () =
   Alcotest.run
     "hegel-jane-concurrent"
@@ -132,6 +172,11 @@ let () =
       , [ Alcotest.test_case "runs on Concurrent_in_thread" `Quick in_thread_test
         ; Alcotest.test_case "runs on a Parallel scheduler" `Quick parallel_scheduler_test
         ; Alcotest.test_case "worker exceptions reach the caller" `Quick worker_exception_test
+        ; Alcotest.test_case
+            "PPX run takes the capability from of_concurrent"
+            `Quick
+            ppx_of_concurrent_test
+        ; Alcotest.test_case "PPX run takes a local capability" `Quick ppx_local_capability_test
         ] )
     ]
 ;;

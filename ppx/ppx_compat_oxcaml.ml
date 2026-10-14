@@ -79,3 +79,9 @@ let map_let_value_bindings f e =
 let portable_value_description vd =
   { vd with pval_modalities = [ { txt = Modality "portable"; loc = vd.pval_loc } ] }
 ;;
+
+let local_pattern pat =
+  { pat with
+    ppat_desc = Ppat_constraint (pat, None, [ { txt = Mode "local"; loc = pat.ppat_loc } ])
+  }
+;;

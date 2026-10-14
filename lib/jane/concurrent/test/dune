@@ -17,7 +17,7 @@
   parallel.scheduler
   alcotest)
  (preprocess
-  (pps ppx_js_style -- -allow-unannotated-ignores)))
+  (pps ppx_js_style ppx_hegel_test -- -allow-unannotated-ignores)))
 
 (rule
  (alias runtest)

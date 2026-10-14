@@ -72,3 +72,7 @@ val map_let_value_bindings
 (** [portable_value_description vd] marks [vd] portable. On OxCaml, adds the
     [portable] modality. Elsewhere, returns [vd] unchanged. *)
 val portable_value_description : value_description -> value_description
+
+(** [local_pattern pat] is [(pat @ local)]. On OxCaml, adds the [local] mode.
+    Elsewhere, returns [pat] unchanged. *)
+val local_pattern : pattern -> pattern
